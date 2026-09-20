@@ -19,10 +19,11 @@ Depends: ${misc:Depends},
  php-vitexsoftware-ease-fluentpdo,
  php-vitexsoftware-pohoda-connector,
  php-vitexsoftware-pohodaser,
+ php-spojenet-pohoda-sql,
  php-symfony-yaml,
  composer
-Recommends: php-sqlite3
+Recommends: php-sqlite3, php-sqlsrv | php8.4-sqlsrv | php8.3-sqlsrv | php8.2-sqlsrv
 Description: Pohoda changes poller, cache and outbound webhooks
- Polls Stormware Pohoda mServer for document changes, stores MultiFlexi-
- compatible changes_cache and record_cache snapshots, exposes a cache HTTP
- API (JSON/YAML/XML) and fans out webhooks to registered endpoints.
+ Polls Stormware Pohoda (mServer lastChanges or MSSQL DatSave) for document
+ changes, stores MultiFlexi-compatible changes_cache and record_cache
+ snapshots, exposes a cache HTTP API (JSON/YAML/XML) and fans out webhooks.

@@ -48,6 +48,7 @@ CREATE TABLE changesapi (
   db_username TEXT,
   db_password TEXT,
   agendas TEXT,
+  poll_mode TEXT,
   enabled INTEGER DEFAULT 1,
   created TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(ico, year)

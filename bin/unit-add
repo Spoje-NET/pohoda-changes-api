@@ -12,10 +12,26 @@ require_once __DIR__.'/../vendor/autoload.php';
     __DIR__.'/../.env',
 );
 
-$opts = getopt('', ['ico:', 'year:', 'url:', 'name::', 'user::', 'pass::', 'db-database::', 'db-host::', 'help']);
+$opts = getopt('', [
+    'ico:',
+    'year:',
+    'url:',
+    'name::',
+    'user::',
+    'pass::',
+    'db-database::',
+    'db-host::',
+    'db-port::',
+    'db-user::',
+    'db-pass::',
+    'poll-mode::',
+    'help',
+]);
 
 if (isset($opts['help']) || empty($opts['ico']) || empty($opts['year']) || empty($opts['url'])) {
-    fwrite(STDERR, "Usage: unit-add --ico=ICO --year=YYYY --url=http://host:port [--name=] [--user=] [--pass=] [--db-database=] [--db-host=]\n");
+    fwrite(STDERR, "Usage: unit-add --ico=ICO --year=YYYY --url=http://host:port \\\n");
+    fwrite(STDERR, "  [--name=] [--user=] [--pass=] [--poll-mode=mserver|mssql] \\\n");
+    fwrite(STDERR, "  [--db-database=] [--db-host=] [--db-port=] [--db-user=] [--db-pass=]\n");
     exit(1);
 }
 
@@ -29,6 +45,10 @@ $id = $units->register([
     'password' => $opts['pass'] ?? null,
     'db_database' => $opts['db-database'] ?? null,
     'db_host' => $opts['db-host'] ?? null,
+    'db_port' => isset($opts['db-port']) ? (int) $opts['db-port'] : null,
+    'db_username' => $opts['db-user'] ?? null,
+    'db_password' => $opts['db-pass'] ?? null,
+    'poll_mode' => $opts['poll-mode'] ?? null,
 ]);
 
 echo "Registered accounting unit id={$id}\n";

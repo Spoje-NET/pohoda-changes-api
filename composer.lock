@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "972638ba1b30d3af51e8a0d20019d576",
+    "content-hash": "111b3c12951529d681c47570b857f501",
     "packages": [
         {
             "name": "doctrine/instantiator",
@@ -854,6 +854,51 @@
                 "source": "https://github.com/riesenia/pohoda/tree/v1.27.0"
             },
             "time": "2026-09-02T10:01:39+00:00"
+        },
+        {
+            "name": "spojenet/pohoda-sql",
+            "version": "0.2.99",
+            "dist": {
+                "type": "path",
+                "url": "../php-spojenet-pohoda-sql",
+                "reference": "ef294cbd23ef9361e0ba466c8ba83e3d05c4139d"
+            },
+            "require": {
+                "php": "^8.1",
+                "vitexsoftware/ease-fluentpdo": "^1.4"
+            },
+            "require-dev": {
+                "ergebnis/composer-normalize": "^2.53",
+                "ergebnis/php-cs-fixer-config": "^6.62",
+                "friendsofphp/php-cs-fixer": "^3.93",
+                "phpstan/phpstan": "*",
+                "phpunit/phpunit": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "SpojeNet\\PohodaSQL\\": "src/SpojeNet/PohodaSQL/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Test\\SpojeNet\\PohodaSQL\\": "tests/src/SpojeNet/PohodaSQL/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Vitex",
+                    "email": "info@vitexsoftware.cz"
+                }
+            ],
+            "description": "Management Library for PohodaSQL",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "symfony/deprecation-contracts",

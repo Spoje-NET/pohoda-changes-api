@@ -51,7 +51,12 @@ class Poller extends \Ease\Sand
         $total = 0;
 
         try {
-            foreach ($this->units->listEnabled() as $unit) {
+            $enabledUnits = $this->units->listEnabled();
+            // Drop idle sqlite reader before AgendaWatcher writes (avoids "database is locked")
+            $this->units->pdo = null;
+            $this->units->fluent = null;
+
+            foreach ($enabledUnits as $unit) {
                 $agendas = AccountingUnit::agendasFor($unit);
 
                 foreach ($agendas as $agenda) {

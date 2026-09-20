@@ -12,6 +12,7 @@ require_once '/usr/share/php/Ease/autoload.php';
 require_once '/usr/share/php/EaseFluentPDO/autoload.php';
 require_once '/usr/share/php/mServer/autoload.php';
 require_once '/usr/share/php/Pohoda/autoload.php';
+require_once '/usr/share/php/PohodaSQL/autoload.php';
 require_once '/usr/share/php/Symfony/Component/Yaml/autoload.php';
 
 spl_autoload_register(static function (string $class): void {

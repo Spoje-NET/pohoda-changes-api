@@ -5,6 +5,7 @@ Poll Stormware Pohoda (mServer `lastChanges`), store MultiFlexi-compatible `chan
 ## Features
 
 - Multi accounting unit registry (`ico` + `year` + mServer `url`) — yearly DB `StwPh_{ico}_{year}`
+- Two poll modes: **mServer `lastChanges`** (default — works for all Pohoda editions) or optional **MSSQL `DatSave`** when SQL is available (via [pohoda-sql](https://github.com/Spoje-NET/PohodaSQL)); documents always loaded from mServer
 - Document snapshots for previous/current diffs and post-delete access
 - Cache HTTP API: **json / yaml / xml** (Stormware XML via [pohodaser](https://github.com/VitexSoftware/php-vitexsoftware-pohodaser))
 - Outbound webhooks with optional filters (`evidences`, `operations`, `icos`)
@@ -21,11 +22,14 @@ flowchart TB
     P["Poller.run()"]
     U["AccountingUnit<br/>enabled IČO + year + mServer URL"]
     A["AgendaWatcher<br/>invoice · bank · addressBook"]
+    MODE{"POLL_MODE"}
+    DISC_MS["mServer lastChanges"]
+    DISC_SQL["MSSQL DatSave<br/>spojenet/pohoda-sql"]
   end
 
   subgraph pohoda["Stormware Pohoda"]
-    MS["mServer<br/>lastChanges + document load"]
-    DB[("MSSQL<br/>StwPh_{ICO}_{YEAR}")]
+    MS["mServer<br/>document load"]
+    SQL[("MSSQL<br/>StwPh_{ICO}_{YEAR}")]
   end
 
   subgraph store["Local store"]
@@ -45,9 +49,11 @@ flowchart TB
   end
 
   CRON --> P
-  P --> U --> A
-  A -->|"lastChanges since watermark"| MS
-  MS --> DB
+  P --> U --> A --> MODE
+  MODE -->|mserver| DISC_MS --> MS
+  MODE -->|mssql| DISC_SQL --> SQL
+  DISC_MS --> MS
+  DISC_SQL -->|"IDs only"| MS
   A -->|"load document + XML"| MS
   A --> RC
   A --> CC
@@ -59,7 +65,18 @@ flowchart TB
   CONS -.->|"ease://pohoda/…"| MS
 ```
 
-**Cycle in short:** poller walks each accounting unit and agenda → asks mServer for IDs changed since the watermark → stores current (and keeps previous) snapshots in `record_cache` → appends a MultiFlexi-shaped row to `changes_cache` → POSTs matching webhooks → clients read snapshots from the cache API (or resolve `document_uri` back to mServer).
+**Cycle in short:** poller walks each accounting unit and agenda → discovers changed IDs (`mserver` = `lastChanges`, `mssql` = `DatSave` via [pohoda-sql](https://github.com/Spoje-NET/PohodaSQL)) → loads each document from **mServer** → stores snapshots in `record_cache` → appends `changes_cache` → POSTs matching webhooks.
+
+### Poll modes
+
+| Mode | Discovery | Document body | When to use |
+|------|-----------|---------------|-------------|
+| `mserver` (**default**) | mServer filter `lastChanges` | mServer | **All Pohoda editions** — many have no MSSQL; this is the only universal way to learn about new events |
+| `mssql` (optional) | SQL `WHERE DatSave > watermark` on `FA` / `BV` / `AD` | mServer (only requested IDs) | SQL Server / higher editions where `StwPh_*` is reachable — cheaper discovery, less mServer list traffic |
+
+**mServer polling is not removed and stays the default.** MSSQL mode is an opt-in optimization for deployments that already have SQL access; it never replaces mServer for loading document bodies.
+
+Set globally with `POLL_MODE=mssql` or per unit (`poll_mode` / `unit-add --poll-mode=mssql`). MSSQL defaults: `POHODA_MSSQL_*` or per-unit `db_host` / `db_username` / … For a quiet first run use `POLL_MSSQL_SEED_ONLY=true` (stores `MAX(DatSave)` without exporting history).
 
 ## Quick start
 
@@ -109,7 +126,7 @@ Auth: header `X-Pohoda-Token` when `CACHE_API_TOKEN` is set.
 
 | Command | Purpose |
 |---------|---------|
-| `bin/unit-add` | Register IČO + year + mServer URL |
+| `bin/unit-add` | Register IČO + year + mServer URL (+ optional MSSQL / poll-mode) |
 | `bin/unit-list` | List units |
 | `bin/unit-disable` | Disable/enable unit |
 | `bin/unit-rollover` | Copy units from year A → B |

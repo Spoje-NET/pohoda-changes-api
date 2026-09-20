@@ -60,6 +60,7 @@ class AccountingUnit extends \Ease\SQL\Engine
             'db_username' => $data['db_username'] ?? null,
             'db_password' => $data['db_password'] ?? null,
             'agendas' => isset($data['agendas']) ? (is_string($data['agendas']) ? $data['agendas'] : json_encode($data['agendas'])) : null,
+            'poll_mode' => isset($data['poll_mode']) ? (string) $data['poll_mode'] : null,
             'enabled' => array_key_exists('enabled', $data) ? (int) (bool) $data['enabled'] : 1,
         ];
 
@@ -149,6 +150,7 @@ class AccountingUnit extends \Ease\SQL\Engine
                 'db_username' => $src['db_username'],
                 'db_password' => $src['db_password'],
                 'agendas' => $src['agendas'],
+                'poll_mode' => $src['poll_mode'] ?? null,
                 'enabled' => true,
             ]);
             ++$created;
@@ -176,6 +178,61 @@ class AccountingUnit extends \Ease\SQL\Engine
             'user' => (string) ($unit['username'] ?: \Ease\Shared::cfg('POHODA_USERNAME', '')),
             'password' => (string) ($unit['password'] ?: \Ease\Shared::cfg('POHODA_PASSWORD', '')),
         ];
+    }
+
+    /**
+     * Resolve MSSQL connection options for spojenet/pohoda-sql (Ease FluentPDO).
+     *
+     * Per-unit db_* fields override global POHODA_MSSQL_* defaults.
+     *
+     * @param array<string, mixed> $unit
+     *
+     * @return array<string, mixed>
+     */
+    public static function mssqlOptions(array $unit): array
+    {
+        $host = (string) ($unit['db_host'] ?: \Ease\Shared::cfg('POHODA_MSSQL_HOST', ''));
+        $database = (string) ($unit['db_database'] ?: self::defaultDatabase((string) $unit['ico'], (int) $unit['year']));
+        $user = (string) ($unit['db_username'] ?: \Ease\Shared::cfg('POHODA_MSSQL_USER', ''));
+        $pass = (string) ($unit['db_password'] ?: \Ease\Shared::cfg('POHODA_MSSQL_PASSWORD', ''));
+        $port = $unit['db_port'] ?: \Ease\Shared::cfg('POHODA_MSSQL_PORT', 1433);
+        $settings = (string) \Ease\Shared::cfg('POHODA_MSSQL_SETTINGS', 'TrustServerCertificate=yes');
+        $settings = ltrim($settings, ';');
+
+        if ($host === '' || $user === '') {
+            throw new \RuntimeException(sprintf(
+                'MSSQL credentials missing for unit %s/%s (set db_host/db_username or POHODA_MSSQL_*)',
+                $unit['ico'] ?? '?',
+                $unit['year'] ?? '?',
+            ));
+        }
+
+        return [
+            'dbType' => 'sqlsrv',
+            'server' => $host,
+            'port' => (string) $port,
+            'database' => $database,
+            'dbLogin' => $user,
+            'dbPass' => $pass,
+            // Ease FluentPDO prefixes a semicolon itself — do not add another
+            'dbSettings' => $settings,
+            'autoload' => false,
+        ];
+    }
+
+    /**
+     * Poll mode: mserver (default) or mssql.
+     *
+     * Default is always mserver — required for Pohoda editions without MSSQL.
+     * mssql is an optional faster discovery path when StwPh_* is reachable.
+     *
+     * @param array<string, mixed> $unit
+     */
+    public static function pollModeFor(array $unit): string
+    {
+        $mode = strtolower((string) ($unit['poll_mode'] ?? \Ease\Shared::cfg('POLL_MODE', 'mserver')));
+
+        return $mode === 'mssql' ? 'mssql' : 'mserver';
     }
 
     /**

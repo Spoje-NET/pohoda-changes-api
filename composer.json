@@ -21,12 +21,23 @@
                     "vitexsoftware/pohoda-connector": "0.1.99"
                 }
             }
+        },
+        {
+            "type": "path",
+            "url": "../php-spojenet-pohoda-sql",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "spojenet/pohoda-sql": "0.2.99"
+                }
+            }
         }
     ],
     "require": {
         "php": ">=8.2",
         "ext-curl": "*",
         "ext-json": "*",
+        "spojenet/pohoda-sql": "^0.2",
         "symfony/yaml": "^6.4|^7.0",
         "vitexsoftware/ease-core": "^1.50",
         "vitexsoftware/ease-fluentpdo": "^1.4",

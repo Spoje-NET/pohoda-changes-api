@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Pohoda\Changes;
 
 /**
- * Poll one agenda for one accounting unit via mServer lastChanges.
+ * Poll one agenda for one accounting unit.
+ *
+ * Modes ({@see AccountingUnit::pollModeFor}):
+ * - mserver — discover via lastChanges, load via mServer
+ * - mssql   — discover via DatSave (spojenet/pohoda-sql), load via mServer
  */
 class AgendaWatcher extends \Ease\Sand
 {
@@ -23,13 +27,17 @@ class AgendaWatcher extends \Ease\Sand
 
     private \Ease\SQL\Engine $pollState;
 
+    private MserverDocumentLoader $documentLoader;
+
     public function __construct(
         ?RecordCache $recordCache = null,
         ?ChangeRecorder $changeRecorder = null,
+        ?MserverDocumentLoader $documentLoader = null,
     ) {
         $this->recordCache = $recordCache ?? new RecordCache();
         $this->changeRecorder = $changeRecorder ?? new ChangeRecorder();
         $this->pollState = new \Ease\SQL\Engine(null, ['myTable' => 'poll_state']);
+        $this->documentLoader = $documentLoader ?? new MserverDocumentLoader();
     }
 
     /**
@@ -48,78 +56,58 @@ class AgendaWatcher extends \Ease\Sand
             return [];
         }
 
-        $opts = AccountingUnit::mServerOptions($unit);
-        /** @var \mServer\Client $client */
-        $client = new $class(null, [
-            'url' => $opts['url'],
-            'ico' => $opts['ico'],
-            'user' => $opts['user'],
-            'password' => $opts['password'],
-            'debug' => (bool) \Ease\Shared::cfg('APP_DEBUG', false),
-        ]);
-
+        $mode = AccountingUnit::pollModeFor($unit);
         $watermark = $this->getWatermark((int) $unit['id'], $agendaKey);
-        $filter = [];
-
-        if ($watermark !== null) {
-            $filter['lastChanges'] = $watermark;
-        }
-
-        $client->reset();
-        $rows = $client->getColumnsFromPohoda(['id'], $filter) ?? [];
-        $changes = [];
-        $maxSeen = $watermark;
         $now = (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:s');
         $minVersions = (int) \Ease\Shared::cfg('RECORD_CACHE_MIN_VERSIONS', 2);
 
-        foreach ($rows as $key => $row) {
-            if (!is_array($row)) {
-                continue;
+        if ($mode === 'mssql'
+            && $watermark === null
+            && filter_var(\Ease\Shared::cfg('POLL_MSSQL_SEED_ONLY', false), \FILTER_VALIDATE_BOOLEAN)
+        ) {
+            $seed = $this->mssqlSource()->seedWatermark($unit, $agendaKey);
+
+            if ($seed !== null) {
+                $this->setWatermark((int) $unit['id'], $agendaKey, $seed);
+                $this->addStatusMessage(
+                    sprintf('MSSQL watermark seeded for %s/%s at %s (no historical export)', $unit['ico'], $agendaKey, $seed),
+                    'info',
+                );
+            } else {
+                $this->setWatermark((int) $unit['id'], $agendaKey, $now);
             }
 
-            $recordId = (int) ($row['id'] ?? $key);
+            return [];
+        }
+
+        try {
+            $source = $this->changeSourceFor($mode);
+            $changed = $source->listChanged($unit, $agendaKey, $watermark);
+        } catch (\Throwable $e) {
+            $this->addStatusMessage(
+                sprintf('Change discovery failed (%s) for %s/%s: %s', $mode, $unit['ico'], $agendaKey, $e->getMessage()),
+                'error',
+            );
+
+            return [];
+        }
+
+        $changes = [];
+        $maxSeen = $watermark;
+
+        foreach ($changed as $row) {
+            $recordId = (int) ($row['id'] ?? 0);
 
             if ($recordId < 1) {
                 continue;
             }
 
-            try {
-                $client->reset();
-                $documents = $client->getColumnsFromPohoda(['*'], ['id' => (string) $recordId]) ?? [];
-            } catch (\Throwable $e) {
-                $this->addStatusMessage(sprintf('Load failed %s#%d: %s', $agendaKey, $recordId, $e->getMessage()), 'warning');
-
-                continue;
-            }
-
-            $document = null;
-
-            if (isset($documents[(string) $recordId]) && is_array($documents[(string) $recordId])) {
-                $document = $documents[(string) $recordId];
-            } elseif (isset($documents[$recordId]) && is_array($documents[$recordId])) {
-                $document = $documents[$recordId];
-            } elseif (isset($documents[0]) && is_array($documents[0])) {
-                $document = $documents[0];
-            } elseif (isset($documents['id'])) {
-                $document = $documents;
-            } else {
-                $first = reset($documents);
-                $document = is_array($first) ? $first : null;
-            }
+            $loaded = $this->documentLoader->load($unit, $agendaKey, $recordId);
+            $document = $loaded['document'];
+            $xml = $loaded['xml'];
 
             if (!is_array($document) || $document === []) {
-                $this->addStatusMessage(sprintf('Empty document %s#%d for %s', $agendaKey, $recordId, $unit['ico']), 'warning');
-
                 continue;
-            }
-
-            $xml = null;
-
-            try {
-                $client->reset();
-                $xml = $client->getPohodaXML(['id' => (string) $recordId]);
-            } catch (\Throwable $e) {
-                $this->addStatusMessage(sprintf('XML snapshot failed for %s#%d: %s', $agendaKey, $recordId, $e->getMessage()), 'warning');
             }
 
             $operation = $this->recordCache->hasAny($recordId, $agendaKey, (string) $unit['serverurl'])
@@ -149,17 +137,32 @@ class AgendaWatcher extends \Ease\Sand
                 $document,
             );
             $changes[] = $recorded;
-            $maxSeen = $now;
+
+            if (!empty($row['changed_at'])) {
+                $candidate = (string) $row['changed_at'];
+                $maxSeen = ($maxSeen === null || strcmp($candidate, $maxSeen) > 0) ? $candidate : $maxSeen;
+            } else {
+                $maxSeen = $now;
+            }
         }
 
         if ($maxSeen !== null) {
             $this->setWatermark((int) $unit['id'], $agendaKey, $maxSeen);
         } elseif ($watermark === null) {
-            // first successful empty poll — seed watermark so next run is incremental
             $this->setWatermark((int) $unit['id'], $agendaKey, $now);
         }
 
         return $changes;
+    }
+
+    protected function changeSourceFor(string $mode): ChangeIdSource
+    {
+        return $mode === 'mssql' ? $this->mssqlSource() : new MserverChangeSource();
+    }
+
+    protected function mssqlSource(): MssqlChangeSource
+    {
+        return new MssqlChangeSource();
     }
 
     private function getWatermark(int $unitId, string $agenda): ?string

@@ -18,14 +18,6 @@ class RecordCache extends \Ease\SQL\Engine
      */
     public function store(int $inversion, int $recordId, string $evidence, string $serverUrl, array $data, ?string $xml = null): void
     {
-        $existing = $this->getFluentPDO()
-            ->from($this->myTable)
-            ->where('inversion', $inversion)
-            ->where('recordid', $recordId)
-            ->where('evidence', $evidence)
-            ->where('serverurl', $serverUrl)
-            ->fetch();
-
         $payload = [
             'inversion' => $inversion,
             'recordid' => $recordId,
@@ -35,11 +27,43 @@ class RecordCache extends \Ease\SQL\Engine
             'xml' => $xml,
         ];
 
-        if ($existing) {
-            $this->updateToSQL($payload, ['id' => $existing['id']]);
-        } else {
-            $this->insertToSQL($payload);
+        $attempts = 0;
+        $last = null;
+
+        while ($attempts < 8) {
+            ++$attempts;
+
+            try {
+                $existing = $this->getFluentPDO()
+                    ->from($this->myTable)
+                    ->where('inversion', $inversion)
+                    ->where('recordid', $recordId)
+                    ->where('evidence', $evidence)
+                    ->where('serverurl', $serverUrl)
+                    ->fetch();
+
+                if ($existing) {
+                    $this->updateToSQL($payload, ['id' => $existing['id']]);
+                } else {
+                    $this->insertToSQL($payload);
+                }
+
+                return;
+            } catch (\Throwable $e) {
+                $last = $e;
+                $msg = $e->getMessage();
+
+                if (!str_contains($msg, 'database is locked') && !str_contains($msg, 'SQLITE_BUSY')) {
+                    throw $e;
+                }
+
+                usleep(50_000 * $attempts);
+                $this->pdo = null;
+                $this->fluent = null;
+            }
         }
+
+        throw $last ?? new \RuntimeException('record_cache store failed');
     }
 
     /**

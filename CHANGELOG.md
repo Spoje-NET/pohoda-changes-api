@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- MSSQL poll mode (`POLL_MODE=mssql`): discover changes via `DatSave` using `spojenet/pohoda-sql`, load documents only for those IDs from mServer
+- `Agenda::idsChangedSince()` / `maxChangedAt()` in pohoda-sql
+- Per-unit `poll_mode` and expanded `unit-add` MSSQL options
+- `POLL_MSSQL_SEED_ONLY` / `POLL_MSSQL_LIMIT` controls
+
 ## [0.1.0] - 2026-09-20
 
 ### Added
