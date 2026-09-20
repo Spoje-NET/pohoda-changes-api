@@ -7,7 +7,7 @@ namespace Pohoda\Changes\Webhook;
 /**
  * Fan-out HTTP POST deliveries for a recorded change.
  */
-class Dispatcher extends \Ease\Atom
+class Dispatcher extends \Ease\Sand
 {
     private Endpoint $endpoints;
 

@@ -4,16 +4,28 @@ set -e
 case "$1" in
     configure)
         mkdir -p /var/lib/pohoda-changes-api
+        # www-data must write WAL/SHM beside the sqlite file; poller (root/cron) shares via setgid
+        chown www-data:www-data /var/lib/pohoda-changes-api
+        chmod 2775 /var/lib/pohoda-changes-api
         if [ ! -f /etc/pohoda-changes-api/.env ] && [ -f /usr/share/pohoda-changes-api/.env.example ]; then
             mkdir -p /etc/pohoda-changes-api
             cp /usr/share/pohoda-changes-api/.env.example /etc/pohoda-changes-api/.env
             # Point default sqlite path
             sed -i 's|^DB_DATABASE=.*|DB_DATABASE=/var/lib/pohoda-changes-api/pohoda-changes.db|' \
                 /etc/pohoda-changes-api/.env || true
+            chmod 640 /etc/pohoda-changes-api/.env
+            chown root:www-data /etc/pohoda-changes-api/.env
         fi
         # Symlink .env next to installed app for Shared::init defaults
         if [ -f /etc/pohoda-changes-api/.env ]; then
             ln -sfn /etc/pohoda-changes-api/.env /usr/share/pohoda-changes-api/.env
+        fi
+        if [ -f /var/lib/pohoda-changes-api/pohoda-changes.db ]; then
+            chown www-data:www-data /var/lib/pohoda-changes-api/pohoda-changes.db
+            chmod 664 /var/lib/pohoda-changes-api/pohoda-changes.db
+        fi
+        if command -v a2enconf >/dev/null 2>&1; then
+            a2enconf -q pohoda-changes-api || true
         fi
         if command -v phinx >/dev/null 2>&1; then
             (cd /usr/share/pohoda-changes-api && phinx migrate -c phinx-adapter.php) || true

@@ -9,7 +9,7 @@ use Pohoda\Changes\Webhook\Dispatcher;
 /**
  * Poll all enabled accounting units and fan-out webhooks.
  */
-class Poller extends \Ease\Atom
+class Poller extends \Ease\Sand
 {
     private AccountingUnit $units;
 

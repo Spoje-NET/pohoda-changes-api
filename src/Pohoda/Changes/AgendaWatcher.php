@@ -7,7 +7,7 @@ namespace Pohoda\Changes;
 /**
  * Poll one agenda for one accounting unit via mServer lastChanges.
  */
-class AgendaWatcher extends \Ease\Atom
+class AgendaWatcher extends \Ease\Sand
 {
     /** @var array<string, class-string<\mServer\Client>> */
     public const AGENDA_CLASSES = [
@@ -65,22 +65,47 @@ class AgendaWatcher extends \Ease\Atom
             $filter['lastChanges'] = $watermark;
         }
 
+        $client->reset();
         $rows = $client->getColumnsFromPohoda(['id'], $filter) ?? [];
         $changes = [];
         $maxSeen = $watermark;
         $now = (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:s');
         $minVersions = (int) \Ease\Shared::cfg('RECORD_CACHE_MIN_VERSIONS', 2);
 
-        foreach ($rows as $row) {
-            $recordId = (int) ($row['id'] ?? 0);
+        foreach ($rows as $key => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $recordId = (int) ($row['id'] ?? $key);
 
             if ($recordId < 1) {
                 continue;
             }
 
-            $xml = $client->getPohodaXML($recordId);
-            $client->loadFromPohoda($recordId);
-            $document = $client->getData();
+            try {
+                $client->reset();
+                $documents = $client->getColumnsFromPohoda(['*'], ['id' => (string) $recordId]) ?? [];
+            } catch (\Throwable $e) {
+                $this->addStatusMessage(sprintf('Load failed %s#%d: %s', $agendaKey, $recordId, $e->getMessage()), 'warning');
+
+                continue;
+            }
+
+            $document = null;
+
+            if (isset($documents[(string) $recordId]) && is_array($documents[(string) $recordId])) {
+                $document = $documents[(string) $recordId];
+            } elseif (isset($documents[$recordId]) && is_array($documents[$recordId])) {
+                $document = $documents[$recordId];
+            } elseif (isset($documents[0]) && is_array($documents[0])) {
+                $document = $documents[0];
+            } elseif (isset($documents['id'])) {
+                $document = $documents;
+            } else {
+                $first = reset($documents);
+                $document = is_array($first) ? $first : null;
+            }
 
             if (!is_array($document) || $document === []) {
                 $this->addStatusMessage(sprintf('Empty document %s#%d for %s', $agendaKey, $recordId, $unit['ico']), 'warning');
@@ -88,12 +113,20 @@ class AgendaWatcher extends \Ease\Atom
                 continue;
             }
 
+            $xml = null;
+
+            try {
+                $client->reset();
+                $xml = $client->getPohodaXML(['id' => (string) $recordId]);
+            } catch (\Throwable $e) {
+                $this->addStatusMessage(sprintf('XML snapshot failed for %s#%d: %s', $agendaKey, $recordId, $e->getMessage()), 'warning');
+            }
+
             $operation = $this->recordCache->hasAny($recordId, $agendaKey, (string) $unit['serverurl'])
                 ? 'update'
                 : 'create';
 
             $inversion = time();
-            // ensure uniqueness within the same second
             usleep(1000);
             $inversion = max($inversion, time());
 

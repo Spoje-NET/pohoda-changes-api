@@ -1,9 +1,10 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * Debian autoloader for pohoda-changes-api
+ *
+ * Note: no declare(strict_types=1) — debian/rules inserts APP_NAME/APP_VERSION
+ * immediately after the opening <?php tag.
  */
 
 require_once '/usr/share/php/Composer/InstalledVersions.php';

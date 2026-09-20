@@ -9,6 +9,58 @@ Poll Stormware Pohoda (mServer `lastChanges`), store MultiFlexi-compatible `chan
 - Cache HTTP API: **json / yaml / xml** (Stormware XML via [pohodaser](https://github.com/VitexSoftware/php-vitexsoftware-pohodaser))
 - Outbound webhooks with optional filters (`evidences`, `operations`, `icos`)
 
+## How it works
+
+```mermaid
+flowchart TB
+  subgraph schedule["Schedule"]
+    CRON["cron / systemd<br/>pohoda-changes-poller"]
+  end
+
+  subgraph poller["Poller"]
+    P["Poller.run()"]
+    U["AccountingUnit<br/>enabled IČO + year + mServer URL"]
+    A["AgendaWatcher<br/>invoice · bank · addressBook"]
+  end
+
+  subgraph pohoda["Stormware Pohoda"]
+    MS["mServer<br/>lastChanges + document load"]
+    DB[("MSSQL<br/>StwPh_{ICO}_{YEAR}")]
+  end
+
+  subgraph store["Local store"]
+    RC[("record_cache<br/>JSON + XML snapshots")]
+    CC[("changes_cache<br/>create / update / delete")]
+    PS[("poll_state<br/>watermark per agenda")]
+  end
+
+  subgraph out["Outbound"]
+    WH["Webhook Dispatcher<br/>filter by evidence / operation / IČO"]
+    EP["Registered HTTP endpoints"]
+  end
+
+  subgraph api["Cache HTTP API · public/"]
+    CA["GET /cache/{ico}/{year}/{evidence}/{id}<br/>json · yaml · xml"]
+    CONS["Consumers<br/>MultiFlexi · mServer fetch · diffs"]
+  end
+
+  CRON --> P
+  P --> U --> A
+  A -->|"lastChanges since watermark"| MS
+  MS --> DB
+  A -->|"load document + XML"| MS
+  A --> RC
+  A --> CC
+  A --> PS
+  P --> WH --> EP
+  CC -.->|"document_uri + cache_url"| WH
+  RC --> CA
+  CA -->|"X-Pohoda-Token"| CONS
+  CONS -.->|"ease://pohoda/…"| MS
+```
+
+**Cycle in short:** poller walks each accounting unit and agenda → asks mServer for IDs changed since the watermark → stores current (and keeps previous) snapshots in `record_cache` → appends a MultiFlexi-shaped row to `changes_cache` → POSTs matching webhooks → clients read snapshots from the cache API (or resolve `document_uri` back to mServer).
+
 ## Quick start
 
 ```bash
