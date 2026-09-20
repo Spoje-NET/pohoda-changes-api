@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+\define('APP_NAME', 'PohodaChangesUnitDisable');
+
+require_once __DIR__.'/../vendor/autoload.php';
+
+\Ease\Shared::init(
+    ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'],
+    __DIR__.'/../.env',
+);
+
+$opts = getopt('', ['id:', 'ico:', 'year:', 'enable', 'help']);
+
+if (isset($opts['help'])) {
+    fwrite(STDERR, "Usage: unit-disable --id=N | --ico=ICO --year=YYYY [--enable]\n");
+    exit(1);
+}
+
+$units = new \Pohoda\Changes\AccountingUnit();
+$enable = isset($opts['enable']);
+
+if (!empty($opts['id'])) {
+    $id = (int) $opts['id'];
+} elseif (!empty($opts['ico']) && !empty($opts['year'])) {
+    $row = $units->findByIcoYear((string) $opts['ico'], (int) $opts['year']);
+
+    if (!$row) {
+        fwrite(STDERR, "Unit not found\n");
+        exit(1);
+    }
+
+    $id = (int) $row['id'];
+} else {
+    fwrite(STDERR, "Usage: unit-disable --id=N | --ico=ICO --year=YYYY [--enable]\n");
+    exit(1);
+}
+
+$units->setEnabled($id, $enable);
+echo ($enable ? 'Enabled' : 'Disabled')." unit id={$id}\n";

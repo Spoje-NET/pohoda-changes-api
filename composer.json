@@ -1,0 +1,64 @@
+{
+    "name": "spojenet/pohoda-changes-api",
+    "description": "Pohoda changes poller, record cache and outbound webhooks",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Vítězslav Dvořák",
+            "email": "info@vitexsoftware.cz"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../VitexSoftware/php-vitexsoftware-pohoda-connector",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "vitexsoftware/pohoda-connector": "0.1.99"
+                }
+            }
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "symfony/yaml": "^6.4|^7.0",
+        "vitexsoftware/ease-core": "^1.50",
+        "vitexsoftware/ease-fluentpdo": "^1.4",
+        "vitexsoftware/pohoda-connector": "^0.1",
+        "vitexsoftware/pohodaser": "^0.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10|^11",
+        "phpstan/phpstan": "*",
+        "robmorgan/phinx": "^0.16"
+    },
+    "autoload": {
+        "psr-4": {
+            "Pohoda\\Changes\\": "src/Pohoda/Changes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Pohoda\\Changes\\Tests\\": "tests/Pohoda/Changes/"
+        }
+    },
+    "bin": [
+        "bin/pohoda-changes-poller",
+        "bin/unit-add",
+        "bin/unit-list",
+        "bin/unit-disable",
+        "bin/unit-rollover",
+        "bin/webhook-add",
+        "bin/webhook-list",
+        "bin/webhook-disable"
+    ],
+    "config": {
+        "sort-packages": true
+    }
+}

@@ -1,0 +1,31 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+\define('APP_NAME', 'PohodaChangesWebhookAdd');
+
+require_once __DIR__.'/../vendor/autoload.php';
+
+\Ease\Shared::init(
+    ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'],
+    __DIR__.'/../.env',
+);
+
+$opts = getopt('', ['url:', 'secret::', 'evidences::', 'operations::', 'icos::', 'help']);
+
+if (isset($opts['help']) || empty($opts['url'])) {
+    fwrite(STDERR, "Usage: webhook-add --url=https://… [--secret=] [--evidences=invoice,bank] [--operations=create,update] [--icos=12345678]\n");
+    exit(1);
+}
+
+$ep = new \Pohoda\Changes\Webhook\Endpoint();
+$id = $ep->register([
+    'url' => $opts['url'],
+    'secret' => $opts['secret'] ?? null,
+    'evidences' => $opts['evidences'] ?? null,
+    'operations' => $opts['operations'] ?? null,
+    'icos' => $opts['icos'] ?? null,
+]);
+
+echo "Registered webhook endpoint id={$id}\n";

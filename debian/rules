@@ -1,0 +1,35 @@
+#!/usr/bin/make -f
+
+PKG_VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/~.*//')
+PKG_SOURCE  := $(shell jq -r '.name' composer.json)
+PKG_TYPE    := $(shell jq -r '.type' composer.json)
+
+%:
+	dh $@ --with phpcomposer
+
+override_dh_auto_test:
+	@echo "Skipping dh_auto_test; run vendor/bin/phpunit during development"
+
+override_dh_install:
+	dh_install
+	install -D -m 0644 debian/autoload.php \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	install -m0755 -d debian/pohoda-changes-api/usr/share/pkg-php-tools/autoloaders
+	echo 'spojenet pohoda-changes-api pohoda-changes-api/autoload.php' \
+		> debian/pohoda-changes-api/usr/share/pkg-php-tools/autoloaders/pohoda-changes-api
+	# Inject Composer InstalledVersions + APP_* constants
+	sed -i "1a defined('APP_NAME') || define('APP_NAME', '$(PKG_SOURCE)');" \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	sed -i "s|'unknown'|'$(PKG_SOURCE)'|" \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	sed -i "s|'0.0.0'|'$(PKG_VERSION)'|" \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	sed -i "s|'library'|'$(PKG_TYPE)'|g" \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	sed -i "2a defined('APP_VERSION') || define('APP_VERSION', '$(PKG_VERSION)');" \
+		debian/pohoda-changes-api/usr/share/php/pohoda-changes-api/autoload.php
+	# Rewrite vendor autoload paths in installed binaries and public entry
+	find debian/pohoda-changes-api -type f \( -name '*.php' -o -path '*/bin/*' \) -print0 | \
+		xargs -0 sed -i "s|require_once __DIR__.'/../vendor/autoload.php';|require_once '/usr/share/php/pohoda-changes-api/autoload.php';|g"
+	find debian/pohoda-changes-api -type f \( -name '*.php' -o -path '*/bin/*' \) -print0 | \
+		xargs -0 sed -i "s|require_once __DIR__ . '/../vendor/autoload.php';|require_once '/usr/share/php/pohoda-changes-api/autoload.php';|g"

@@ -1,0 +1,8 @@
+/vendor/
+/.env
+/phpunit.xml.bak
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/nbproject/
+*.db
+/dist/

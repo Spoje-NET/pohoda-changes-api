@@ -1,0 +1,20 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+\define('APP_NAME', 'PohodaChangesWebhookList');
+
+require_once __DIR__.'/../vendor/autoload.php';
+
+\Ease\Shared::init(
+    ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'],
+    __DIR__.'/../.env',
+);
+
+$ep = new \Pohoda\Changes\Webhook\Endpoint();
+printf("%-5s %-6s %s\n", 'ID', 'EN', 'URL');
+
+foreach ($ep->listAll() as $e) {
+    printf("%-5s %-6s %s\n", $e['id'], ((int) $e['enabled']) ? 'yes' : 'no', $e['url']);
+}

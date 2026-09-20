@@ -1,0 +1,28 @@
+Source: pohoda-changes-api
+Section: web
+Priority: optional
+Maintainer: CyberVitexus <info@vitexsoftware.cz>
+Build-Depends: debhelper-compat (= 13), pkg-php-tools, jq, moreutils
+Standards-Version: 4.7.0
+Homepage: https://github.com/Spoje-NET/pohoda-changes-api
+Rules-Requires-Root: no
+
+Package: pohoda-changes-api
+Architecture: all
+Depends: ${misc:Depends},
+ php-cli,
+ php-curl,
+ php-xml,
+ php-sqlite3 | php-mysql | php-pgsql,
+ php-cakephp-phinx | php-phinx,
+ php-vitexsoftware-ease-core,
+ php-vitexsoftware-ease-fluentpdo,
+ php-vitexsoftware-pohoda-connector,
+ php-vitexsoftware-pohodaser,
+ php-symfony-yaml,
+ composer
+Recommends: php-sqlite3
+Description: Pohoda changes poller, cache and outbound webhooks
+ Polls Stormware Pohoda mServer for document changes, stores MultiFlexi-
+ compatible changes_cache and record_cache snapshots, exposes a cache HTTP
+ API (JSON/YAML/XML) and fans out webhooks to registered endpoints.

@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        mkdir -p /var/lib/pohoda-changes-api
+        if [ ! -f /etc/pohoda-changes-api/.env ] && [ -f /usr/share/pohoda-changes-api/.env.example ]; then
+            mkdir -p /etc/pohoda-changes-api
+            cp /usr/share/pohoda-changes-api/.env.example /etc/pohoda-changes-api/.env
+            # Point default sqlite path
+            sed -i 's|^DB_DATABASE=.*|DB_DATABASE=/var/lib/pohoda-changes-api/pohoda-changes.db|' \
+                /etc/pohoda-changes-api/.env || true
+        fi
+        # Symlink .env next to installed app for Shared::init defaults
+        if [ -f /etc/pohoda-changes-api/.env ]; then
+            ln -sfn /etc/pohoda-changes-api/.env /usr/share/pohoda-changes-api/.env
+        fi
+        if command -v phinx >/dev/null 2>&1; then
+            (cd /usr/share/pohoda-changes-api && phinx migrate -c phinx-adapter.php) || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

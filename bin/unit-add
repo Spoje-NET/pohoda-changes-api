@@ -1,0 +1,34 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+\define('APP_NAME', 'PohodaChangesUnitAdd');
+
+require_once __DIR__.'/../vendor/autoload.php';
+
+\Ease\Shared::init(
+    ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'],
+    __DIR__.'/../.env',
+);
+
+$opts = getopt('', ['ico:', 'year:', 'url:', 'name::', 'user::', 'pass::', 'db-database::', 'db-host::', 'help']);
+
+if (isset($opts['help']) || empty($opts['ico']) || empty($opts['year']) || empty($opts['url'])) {
+    fwrite(STDERR, "Usage: unit-add --ico=ICO --year=YYYY --url=http://host:port [--name=] [--user=] [--pass=] [--db-database=] [--db-host=]\n");
+    exit(1);
+}
+
+$units = new \Pohoda\Changes\AccountingUnit();
+$id = $units->register([
+    'ico' => $opts['ico'],
+    'year' => (int) $opts['year'],
+    'url' => $opts['url'],
+    'name' => $opts['name'] ?? null,
+    'username' => $opts['user'] ?? null,
+    'password' => $opts['pass'] ?? null,
+    'db_database' => $opts['db-database'] ?? null,
+    'db_host' => $opts['db-host'] ?? null,
+]);
+
+echo "Registered accounting unit id={$id}\n";

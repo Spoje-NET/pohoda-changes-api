@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="console-application">
+  <id>com.spojenet.pohoda-changes-api</id>
+  <name>Pohoda Changes API</name>
+  <summary>Poll Pohoda changes, cache documents and send webhooks</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="cz.vitexsoftware">
+    <name>VitexSoftware / Spoje.Net</name>
+  </developer>
+  <description>
+    <p>
+      Polls Stormware Pohoda mServer for document changes across multiple
+      accounting units, stores MultiFlexi-compatible change and document
+      caches, exposes a JSON/YAML/XML cache API, and delivers outbound webhooks.
+    </p>
+  </description>
+  <icon type="stock">utilities-terminal</icon>
+  <categories>
+    <category>Office</category>
+    <category>Finance</category>
+  </categories>
+  <url type="homepage">https://github.com/Spoje-NET/pohoda-changes-api</url>
+  <provides>
+    <binary>pohoda-changes-poller</binary>
+  </provides>
+  <launchable type="service">pohoda-changes-poller</launchable>
+  <releases>
+    <release version="0.1.0" date="2026-09-20"/>
+  </releases>
+</component>

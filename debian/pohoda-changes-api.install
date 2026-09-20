@@ -1,0 +1,10 @@
+src/Pohoda/Changes/ usr/share/pohoda-changes-api/src/Pohoda/
+bin/ usr/share/pohoda-changes-api/
+public/ usr/share/pohoda-changes-api/
+db/ usr/share/pohoda-changes-api/
+phinx-adapter.php usr/share/pohoda-changes-api/
+.env.example usr/share/pohoda-changes-api/
+README.md usr/share/doc/pohoda-changes-api/
+debian/metainfo.xml usr/share/metainfo/
+debian/pohoda-changes-api.cron.d etc/cron.d/
+debian/pohoda-changes-api.conf etc/apache2/conf-available/

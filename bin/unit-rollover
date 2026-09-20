@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+\define('APP_NAME', 'PohodaChangesUnitRollover');
+
+require_once __DIR__.'/../vendor/autoload.php';
+
+\Ease\Shared::init(
+    ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'],
+    __DIR__.'/../.env',
+);
+
+$opts = getopt('', ['from:', 'to:', 'disable-old', 'help']);
+
+if (isset($opts['help']) || empty($opts['from']) || empty($opts['to'])) {
+    fwrite(STDERR, "Usage: unit-rollover --from=YYYY --to=YYYY [--disable-old]\n");
+    exit(1);
+}
+
+$units = new \Pohoda\Changes\AccountingUnit();
+$n = $units->rollover((int) $opts['from'], (int) $opts['to'], isset($opts['disable-old']));
+echo "Created {$n} accounting unit(s) for year {$opts['to']}\n";

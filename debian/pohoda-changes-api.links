@@ -1,0 +1,8 @@
+usr/share/pohoda-changes-api/bin/pohoda-changes-poller usr/bin/pohoda-changes-poller
+usr/share/pohoda-changes-api/bin/unit-add usr/bin/pohoda-unit-add
+usr/share/pohoda-changes-api/bin/unit-list usr/bin/pohoda-unit-list
+usr/share/pohoda-changes-api/bin/unit-disable usr/bin/pohoda-unit-disable
+usr/share/pohoda-changes-api/bin/unit-rollover usr/bin/pohoda-unit-rollover
+usr/share/pohoda-changes-api/bin/webhook-add usr/bin/pohoda-webhook-add
+usr/share/pohoda-changes-api/bin/webhook-list usr/bin/pohoda-webhook-list
+usr/share/pohoda-changes-api/bin/webhook-disable usr/bin/pohoda-webhook-disable
